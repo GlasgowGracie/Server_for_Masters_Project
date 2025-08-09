@@ -1,9 +1,18 @@
 {
   "name": "node_server_example",
   "version": "1.0.0",
-  "description": "An example for serving a Unity Web build with Node.js",
-  "main": "index.js",
+  "description": "A server for a unity game.",
+  "main": "server.js",
   "dependencies": {
-    "express": "^4.19.2"
-  }
+    "express": "^4.21.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://stgit.dcs.gla.ac.uk/msc-project-for-information-technology/2024/it-project-2078730w/database-for-masters-project.git"
+  },
+  "author": "Grace Williams",
+  "license": "ISC"
 }
