@@ -1,0 +1,30 @@
+{
+
+    "users":
+    [
+        {
+            "userID": 1,
+            "username": "user1",
+            "password": "123",
+            "gameInProgress": true,
+            "scene": 5,
+            "lives": 3,
+            "score":50,
+            "musicOn": true,
+            "volume": 0.5,
+            "topScore":100
+        },
+        {
+            "userID": 2,
+            "username": "user2",
+            "password": 123,
+            "gameInProgress": false,
+            "scene": 6,
+            "lives": 1,
+            "score": 75,
+            "musicOn":false,
+            "volume": 0,
+            "topScore":75
+        }
+    ]
+}
