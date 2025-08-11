@@ -28,7 +28,7 @@ con.query("CREATE DATABASE IF NOT EXISTS babette_database", function (err, resul
 con.connect(function(err) {
   if (err) throw err;
   console.log("Connected!");
-  let sql = "CREATE TABLE IF NOT EXISTS user_information (username VARCHAR(50) PRIMARY KEY, password_hashed VARCHAR(10) NOT NULL, gameInProgress BOOLEAN NOT NULL, scene INT DEFAULT NULL,lives INT DEFAULT NULL,score INT DEFAULT NULL,topScore INT DEFAULT NULL, musicOn BOOLEAN DEFAULT TRUE, volume FLOAT DEFAULT 0.5)";
+  let sql = "CREATE TABLE IF NOT EXISTS user_information (username VARCHAR(50) PRIMARY KEY, password_hashed VARCHAR(250) NOT NULL, gameInProgress BOOLEAN DEFAULT FALSE NOT NULL, scene INT DEFAULT NULL,lives INT DEFAULT NULL,score INT DEFAULT NULL,topScore INT DEFAULT NULL, musicOn BOOLEAN DEFAULT TRUE, volume FLOAT DEFAULT 0.5)";
   con.query(sql, function (err, result) {
     if (err) throw err;
     console.log("Table created");

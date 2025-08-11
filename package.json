@@ -4,6 +4,7 @@
   "description": "A server for a unity game.",
   "main": "server.js",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "^4.21.2",
     "mysql2": "^3.14.3"
   },
