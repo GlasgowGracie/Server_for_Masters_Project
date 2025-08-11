@@ -4,7 +4,8 @@
   "description": "A server for a unity game.",
   "main": "server.js",
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "mysql2": "^3.14.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
