@@ -1,29 +1,243 @@
 
-var fileName = "dummyUsers.json";
-
+let mysql = require('mysql2');
 var express = require("express");
-var fs = require('fs')
+
 var bodyparser = require('body-parser');
+const bcrypt = require('bcrypt');//used for password hashing
+
 var app = express();
+
+
+var databaseName = "babette_database"
 const port = 8000;
 
 app.use(bodyparser.urlencoded({ extended: true }));
 app.use(bodyparser.json());
 
-var file = fs.readFileSync(fileName); //get the data from the database into the server
-var data = JSON.parse(file);//holds all of the data in the file
 
-// app.get("/", (req, res) => {
-//   //  res.send("Hello world");
-//     var dummyUserData = {
-//         "userID": "user1",
-//         "username": "user1",
-//         "lives": 2,
-//         "score": 150,
-//     };
-//     res.json(dummyUserData);
-// });
+
+let con = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "babette",
+  database: databaseName
+});
+
+con.connect(function(err) {
+  if (err) {
+    console.log("Database connection failed:", err);
+    return;
+  }
+  console.log("Connected to database!");
+});
+
 app.listen(port);
+
+
+app.post('/save', (req, res) => {
+  
+  const {username, scene, lives, score, topScore} = req.body; // get the data
+  
+  findUser(username, function(err, user){
+    if(user === null) {//if the username couldn't be found
+      return res.json({status: "fail_user_not_found"});
+    }
+    else{
+      let sql = "UPDATE user_information SET gameinProgress = TRUE, scene = ? lives = ?, score = ?, topScore = ? WHERE username = ?";
+      con.query(sql, [scene, lives, score, topScore, username], function (err, result) {
+        if (err) {
+          return res.json({ status: "fail", message: "error_saving_user_data"});
+        }
+        if (result.affectedRows > 0) {
+          console.log("User updated successfully");
+          return res.json({ status: "success"});
+        }
+      });
+    }
+  });
+
+});
+
+
+
+
+app.post('/musicpreferences', (req, res)=>
+{
+  console.log("attempting to save music preferences");
+  const {username, musicOn, volume} = req.body; // get the data
+
+});
+
+app.post('/login', (req,res)=>
+{//login a user 
+  console.log("attempting login");
+  const {username, password } = req.body;
+  findUser(username, function(err, user){//find the user 
+    if(user === null) {//if the username couldn't be found
+      return res.json({status: "fail_username_not_found"});
+    }
+    else{
+      //username found, check password matched
+      const storedPass = user.password_hashed;//get the users password to check against
+      bcrypt.compare(password, storedPass, function(err, isMatch) {
+        if (err) {
+          //error checking passwords
+          return res.json({ status: "fail_error_checking_password"});
+        }
+        if (isMatch) {// Login successful
+          console.log("Password correct!");
+          return res.json({ status: "success", username: user.username, gameInProgress:user.gameInProgress, musicOn:user.musicOn, volume: user.volume});
+        } else {
+          console.log("Password incorrect!");
+          return res.json({ status: "fail_password_not_correct"});
+        }
+      });
+    }
+  });
+});
+
+
+
+function findUser(usernameCheck, callback){//find the user in the database by the username
+//  con.connect(function(err) {
+//       if (err) throw err;
+      let sql = "SELECT * FROM user_information WHERE username = ?";
+      con.query(sql, [usernameCheck], function (err, result) {
+        if (err) 
+        {
+          console.log("Database error:", err);
+          return callback(err, null);
+        }
+        if (result.length > 0) {
+            console.log("User found:", result[0].username);
+            callback(null, result[0]); // User found
+        } else {
+            console.log("User not found");
+            callback(null, null); // User not found return null
+        }
+      });
+  // });
+
+}
+
+async function createUser(username, password) 
+{//creates a new account in the database and hashes the password
+  const password_hashed = await bcrypt.hash(password, 10);
+  // con.connect(function(err) {
+    // if (err) throw err;
+    let sql = "INSERT INTO user_information (username, password_hashed) VALUES ?";
+    let user = [
+        [username, password_hashed],
+    ];
+      con.query(sql, [user], function (err, result) {
+        if (err) {
+          console.log("error saving password");          
+          throw err;
+        }
+        // con.end();//end the database connection
+      });
+  // });
+}
+
+app.post('/signup', (req, res) => 
+{//creates a new account 
+  const { username, password } = req.body;
+
+  findUser(username, function(err, user){//find if there is already a user with the username in the database
+    if(user === null) {//if the username is not in use
+      createUser(username, password);//create a new user with their chosen username and password
+      res.json({ status: "success" });//send a message back to the front end to say that it was successful
+    }
+    else{
+      //username already in use
+      res.json({ status: "fail_username_already_in_use"});//send a message back to the front end that the username is already in use
+    }
+
+  })
+
+});
+
+
+//old sign in code:
+  // let usersData = JSON.parse(fs.readFileSync(fileName));//get current users
+  // let users = usersData.users;  
+  // let user = users.find(u => u.username === username);
+
+
+  // if(user){
+  //   console.log("user already has an account"); 
+  //   if(user.password.toString() === password.toString()){
+  //               res.json({ status: "prior_account_found_log_in_success", username: user.username, gameInProgress:user.gameInProgress,
+  //           scene:user.scene, musicOn:user.musicOn, volume: user.volume, lives:user.lives, score:user.score
+  //         });
+  //     }
+  //   else{
+  //       
+  //   }
+  // }
+  // else{
+  //   // const newUser = {
+  //   //   username: username,
+  //   //   password: password,
+  //   //   gameInProgress: false,
+  //   //   scene: 3,
+  //   //   lives: 5,
+  //   //   score: 0,
+  //   //   musicOn: true,
+  //   //   volume: 0.5,
+  //   //   topScore: 0
+  //   // };
+  //   // users.push(newUser);
+  //   // fs.writeFileSync(fileName, JSON.stringify(usersData, null, 2), 'utf8');
+
+  //     createUser(username, password);
+     
+  // }
+
+
+// });
+//old save code
+// try {
+  //   let usersData = JSON.parse(fs.readFileSync(fileName, 'utf8')); // get current users
+  //   console.log("Loaded data:", usersData); // Debug: see what we loaded
+    
+  //   let users = usersData.users; // This is an array
+    
+  //   // Find the user in the array
+  //   let user = users.find(u => u.username === username);
+  //   console.log("Found user:", user); // Debug: see if we found the user
+    
+  //   if (!user) {
+  //     console.log("User not found!");
+  //     res.json({ status: "fail", message: "User not found" });
+  //   } else {
+  //     // Store original values for comparison
+  //     console.log("Before update:", { scene: user.scene, lives: user.lives, score: user.score });
+      
+  //     // Update the user's data
+  //     user.scene = scene;         
+  //     user.lives = lives;
+  //     user.score = score;
+  //     user.musicOn = musicOn;
+  //     user.volume = volume;
+      
+  //     // console.log("After update:", { scene: user.scene, lives: user.lives, score: user.score });
+  //     // console.log("Writing data back to file...");
+      
+  //     // Write the entire structure back to file (not just the users array)
+  //     fs.writeFileSync(fileName, JSON.stringify(usersData, null, 2), 'utf8');
+      
+  //     // Verify the write worked by reading it back
+  //     let verification = JSON.parse(fs.readFileSync(fileName, 'utf8'));
+  //     let verifyUser = verification.users.find(u => u.username === username);
+  //     // console.log("Verification - user after write:", verifyUser);
+      
+  //     res.json({ status: "success" });
+  //   }
+  // } catch (error) {
+  //   console.error("Error in save function:", error);
+  //   res.json({ status: "fail", message: "Server error" });
+  // }
 
 //method to save a game in progress
 // app.post('/save', (req, res) =>{
@@ -49,114 +263,23 @@ app.listen(port);
 // })
 
 
-//debug version 
-app.post('/save', (req, res) => {
-  console.log("attempting to save");
-  console.log("Request body:", req.body); // Debug: see what data we're receiving
-  
-  const {username, scene, lives, score, musicOn, volume} = req.body; // get the data
-  
-  try {
-    let usersData = JSON.parse(fs.readFileSync(fileName, 'utf8')); // get current users
-    console.log("Loaded data:", usersData); // Debug: see what we loaded
-    
-    let users = usersData.users; // This is an array
-    
-    // Find the user in the array
-    let user = users.find(u => u.username === username);
-    console.log("Found user:", user); // Debug: see if we found the user
-    
-    if (!user) {
-      console.log("User not found!");
-      res.json({ status: "fail", message: "User not found" });
-    } else {
-      // Store original values for comparison
-      console.log("Before update:", { scene: user.scene, lives: user.lives, score: user.score });
-      
-      // Update the user's data
-      user.scene = scene;         
-      user.lives = lives;
-      user.score = score;
-      user.musicOn = musicOn;
-      user.volume = volume;
-      
-      // console.log("After update:", { scene: user.scene, lives: user.lives, score: user.score });
-      // console.log("Writing data back to file...");
-      
-      // Write the entire structure back to file (not just the users array)
-      fs.writeFileSync(fileName, JSON.stringify(usersData, null, 2), 'utf8');
-      
-      // Verify the write worked by reading it back
-      let verification = JSON.parse(fs.readFileSync(fileName, 'utf8'));
-      let verifyUser = verification.users.find(u => u.username === username);
-      // console.log("Verification - user after write:", verifyUser);
-      
-      res.json({ status: "success" });
-    }
-  } catch (error) {
-    console.error("Error in save function:", error);
-    res.json({ status: "fail", message: "Server error" });
-  }
-});
+//old login code
+  // // let usersData = JSON.parse(fs.readFileSync(fileName));//get current users
+  // // let users = usersData.users;  
+  // // let user = users.find(u => u.username === username);
+  // if(!user){
+  //   console.log("user not found");  
 
-app.post('/login', (req,res)=>
-{
-  console.log("attempting login");
-  const { username, password } = req.body;
-  let success = false;
-  let usersData = JSON.parse(fs.readFileSync(fileName));//get current users
-  let users = usersData.users;  
-  let user = users.find(u => u.username === username);
-  if(!user){
-    console.log("user not found");  
-    res.json({ status: "fail" });
-  } 
-  else{
-    console.log("user found!");
-    if(user.password.toString() === password.toString()){
-              res.json({ status: "success", username: user.username, gameInProgress:user.gameInProgress,
-          scene:user.scene, musicOn:user.musicOn, volume: user.volume, lives:user.lives, score:user.score
-        });
-    }
-  } 
-
-});
-
-app.post('/signup', (req, res) => 
-{
-  const { username, password } = req.body;
-  let usersData = JSON.parse(fs.readFileSync(fileName));//get current users
-  let users = usersData.users;  
-  let user = users.find(u => u.username === username);
-  if(user){
-    console.log("user already has an account"); 
-    if(user.password.toString() === password.toString()){
-                res.json({ status: "prior_account_found_log_in_success", username: user.username, gameInProgress:user.gameInProgress,
-            scene:user.scene, musicOn:user.musicOn, volume: user.volume, lives:user.lives, score:user.score
-          });
-      }
-    else{
-        res.json({ status: "fail_username_already_in_use"});
-    }
-  }
-  else{
-    const newUser = {
-      username: username,
-      password: password,
-      gameInProgress: false,
-      scene: 3,
-      lives: 5,
-      score: 0,
-      musicOn: true,
-      volume: 0.5,
-      topScore: 0
-    };
-    users.push(newUser);
-    fs.writeFileSync(fileName, JSON.stringify(usersData, null, 2), 'utf8');
-        res.json({ status: "success" });
-  }
-
-
-});
-
-
+  // } 
+  // else{
+  //   console.log("user found!");
+  //   if(user.password.toString() === password.toString()){
+  //             res.json({ status: "success", username: user.username, gameInProgress:user.gameInProgress,
+  //         scene:user.scene, musicOn:user.musicOn, volume: user.volume, lives:user.lives, score:user.score
+  //       });
+  //   }
+  // } 
+// var file = fs.readFileSync(fileName); //get the data from the database into the server
+// var data = JSON.parse(file);//holds all of the data in the file
+// // var fileName = "dummyUsers.json";
+// // var fs = require('fs')
