@@ -55,17 +55,32 @@ app.post('/save', (req, res) => {
       });
     }
   });
-
 });
 
 
 
 
-app.post('/musicpreferences', (req, res)=>
+app.post('/savemusicpreferences', (req, res)=>
 {
   console.log("attempting to save music preferences");
   const {username, musicOn, volume} = req.body; // get the data
-
+  findUser(username, function(err, user){//find the user
+      if(user === null) {//if the username couldn't be found
+        return res.json({status: "fail_user_not_found"});
+      }
+      else{
+        let sql = "UPDATE user_information SET musicOn = ?, volume = ? WHERE username = ?";
+        con.query(sql, [musicOn, volume, username], function (err, result) {
+          if (err) {
+            return res.json({ status: "fail", message: "error_saving_music_preferences"});
+          }
+          if (result.affectedRows > 0) {
+            console.log("user music preferences updated successfully");
+            return res.json({ status: "success"});
+          }
+        });
+      }
+    });
 });
 
 app.post('/login', (req,res)=>
@@ -123,8 +138,6 @@ function findUser(usernameCheck, callback){//find the user in the database by th
 async function createUser(username, password) 
 {//creates a new account in the database and hashes the password
   const password_hashed = await bcrypt.hash(password, 10);
-  // con.connect(function(err) {
-    // if (err) throw err;
     let sql = "INSERT INTO user_information (username, password_hashed) VALUES ?";
     let user = [
         [username, password_hashed],
@@ -134,15 +147,12 @@ async function createUser(username, password)
           console.log("error saving password");          
           throw err;
         }
-        // con.end();//end the database connection
       });
-  // });
 }
 
 app.post('/signup', (req, res) => 
 {//creates a new account 
   const { username, password } = req.body;
-
   findUser(username, function(err, user){//find if there is already a user with the username in the database
     if(user === null) {//if the username is not in use
       createUser(username, password);//create a new user with their chosen username and password
