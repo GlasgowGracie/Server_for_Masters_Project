@@ -34,22 +34,23 @@ con.connect(function(err) {
 app.listen(port);
 
 
-app.post('/save', (req, res) => {
-  
+app.post('/save', (req, res) => {//saves the game progress to the database
+  console.log("attempting to save");
   const {username, scene, lives, score, topScore} = req.body; // get the data
   
-  findUser(username, function(err, user){
+  findUser(username, function(err, user){//find the user in the database
     if(user === null) {//if the username couldn't be found
       return res.json({status: "fail_user_not_found"});
     }
     else{
-      let sql = "UPDATE user_information SET gameinProgress = TRUE, scene = ? lives = ?, score = ?, topScore = ? WHERE username = ?";
+      let sql = "UPDATE user_information SET gameinProgress = TRUE, scene = ?, lives = ?, score = ?, topScore = ? WHERE username = ?";
       con.query(sql, [scene, lives, score, topScore, username], function (err, result) {
         if (err) {
+                    console.log("failed to save");
           return res.json({ status: "fail", message: "error_saving_user_data"});
         }
         if (result.affectedRows > 0) {
-          console.log("User updated successfully");
+          console.log("User updated successfully",  {scene, lives, score});
           return res.json({ status: "success"});
         }
       });
@@ -66,12 +67,28 @@ app.post('/savemusicpreferences', (req, res)=>
   const {username, musicOn, volume} = req.body; // get the data
   findUser(username, function(err, user){//find the user
       if(user === null) {//if the username couldn't be found
+        console.log("fail_user_not_found");
         return res.json({status: "fail_user_not_found"});
       }
       else{
+            let musicOnValue;
+    if (musicOn === true || musicOn === 'true' || musicOn === 'True') {
+        musicOnValue = 1;
+    } else {
+        musicOnValue = 0;
+    }
+    
+    // Convert volume to number if it's a string
+    const volumeValue = parseFloat(volume);
+    
+    console.log("Converted values:", {musicOnValue, volumeValue, username});
         let sql = "UPDATE user_information SET musicOn = ?, volume = ? WHERE username = ?";
-        con.query(sql, [musicOn, volume, username], function (err, result) {
+        con.query(sql, [musicOnValue, volumeValue, username], function (err, result) {
           if (err) {
+            console.log("SQL Error details:", err); // This will show the actual error
+            console.log("SQL Query:", sql);
+            console.log("Parameters:", [musicOn, volume, username]);
+            console.log("user music preferences failed to save");
             return res.json({ status: "fail", message: "error_saving_music_preferences"});
           }
           if (result.affectedRows > 0) {
@@ -111,7 +128,21 @@ app.post('/login', (req,res)=>
   });
 });
 
-
+app.post('/resumegame', (req,res)=>
+{//login a user 
+  console.log("attempting to resume game");
+  const {username} = req.body;
+  findUser(username, function(err, user){//find the user 
+    if(user === null) {//if the username couldn't be found
+      console.log("user not found");
+      return res.json({status: "fail_user_not_found"});
+    }
+    else{//if the user has been found
+      console.log("game resume successful ", {scene:user.scene, lives:user.lives, score: user.score});
+      return res.json({ status: "success", scene:user.scene, lives: user.lives, score: user.score});//return the game in progress info
+    }
+  });
+});
 
 function findUser(usernameCheck, callback){//find the user in the database by the username
 //  con.connect(function(err) {
