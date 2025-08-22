@@ -80,7 +80,7 @@ app.get('/health', (req, res) =>{
 
 app.post('/save', (req, res) => {//saves the game progress to the database
   console.log("attempting to save");
-  const {username, gameInProgress, scene, lives, score} = req.body; // get the data
+  const {username, gameInProgress, scene, lives, score, } = req.body; // get the data
   
   findUser(username, function(err, user){//find the user in the database
     if(user === null) {//if the username couldn't be found
@@ -220,7 +220,7 @@ app.post('/login', (req,res)=>
     }
     else{
       //username found, check password matched
-      const storedPass = user.password_hashed;//get the users password to check against
+      const storedPass = user.password;//get the users password to check against
       bcrypt.compare(password, storedPass, function(err, isMatch) {
         if (err) {
           //error checking passwords
@@ -279,7 +279,7 @@ function findUser(usernameCheck, callback){//find the user in the database by th
 async function createUser(username, password) 
 {//creates a new account in the database and hashes the password
   const password_hashed = await bcrypt.hash(password, 10);
-    let sql = "INSERT INTO user_information (username, password_hashed, gameInProgress) VALUES ?";
+    let sql = "INSERT INTO user_information (username, password, gameInProgress) VALUES ?";
     let user = [
         [username, password_hashed, 0],
     ];
