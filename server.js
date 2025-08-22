@@ -9,19 +9,35 @@ var app = express();
 
 
 var databaseName = "babette_database"
-const port = 8000;
-
+// const port = 8000;//for local hosting
+const port = process.env.PORT || 3000;
 app.use(bodyparser.urlencoded({ extended: true }));
 app.use(bodyparser.json());
 
 
+//for local hosting
+// let con = mysql.createConnection({
+//   host: "localhost",
+//   user: "root",
+//   password: "babette",
+//   database: databaseName
+// });
 
-let con = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "babette",
-  database: databaseName
-});
+let con;
+if (process.env.DATABASE_URL) {
+  con = mysql.createConnection(process.env.DATABASE_URL);
+} else {
+  con = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "babette",
+    database: databaseName
+  });
+}
+
+function query(sql, params, callback) {
+  pool.query(sql, params, callback);
+}
 
 con.connect(function(err) {
   if (err) {
@@ -33,24 +49,34 @@ con.connect(function(err) {
 
 app.listen(port);
 
+app.get('/health', (req, res) =>{
+  res.json({status:"server_online", timestamp: new Date().toISOString()})
+})
+
 
 app.post('/save', (req, res) => {//saves the game progress to the database
   console.log("attempting to save");
-  const {username, scene, lives, score, topScore} = req.body; // get the data
+  const {username, gameInProgress, scene, lives, score} = req.body; // get the data
   
   findUser(username, function(err, user){//find the user in the database
     if(user === null) {//if the username couldn't be found
       return res.json({status: "fail_user_not_found"});
     }
     else{
-      let sql = "UPDATE user_information SET gameinProgress = TRUE, scene = ?, lives = ?, score = ?, topScore = ? WHERE username = ?";
-      con.query(sql, [scene, lives, score, topScore, username], function (err, result) {
+        let gameProgValue;
+        if (gameInProgress=== true || gameInProgress === 'true' || gameInProgress === 'True') {
+            gameProgValue = 1;
+        } else {
+            gameProgValue = 0;
+        }
+      let sql = "UPDATE user_information SET gameinProgress = ?, scene = ?, lives = ?, score = ? WHERE username = ?";
+      query(sql, [gameProgValue, scene, lives, score, username], function (err, result) {
         if (err) {
-                    console.log("failed to save");
+                    console.log("failed to save",{gameProgValue, scene, lives, score});
           return res.json({ status: "fail", message: "error_saving_user_data"});
         }
         if (result.affectedRows > 0) {
-          console.log("User updated successfully",  {scene, lives, score});
+          console.log("User updated successfully",  {gameInProgress, scene, lives, score});
           return res.json({ status: "success"});
         }
       });
@@ -58,37 +84,78 @@ app.post('/save', (req, res) => {//saves the game progress to the database
   });
 });
 
+app.post('/savetopscore', (req, res) =>{
+  console.log("attempting to save top score");
+  const {username, topScore} = req.body; // get the data
+  findUser(username, function(err, user){//find the user
+    if(user === null) 
+    {//if the username couldn't be found
+      console.log("fail_user_not_found");
+      return res.json({status: "fail_user_not_found"});
+    }
+    else
+    {
+      let sql = "UPDATE user_information SET topScore = ? WHERE username = ?";
+      query(sql, [topScore, username], function (err, result) {
+        if (err) {
+          console.log("top score failed to save");
+          return res.json({ status: "fail", message: "error_saving_music_preferences"});
+        }
+        if (result.affectedRows > 0) {
+          console.log("top score updated successfully", topScore);
+          return res.json({ status: "success"});
+        }
+        else{
+          return res.json({ status: "fail", message: "error_saving_music_preferences"});
+        }
+      });
+    }
+  });
+
+})
 
 
-
-app.post('/savemusicpreferences', (req, res)=>
+app.post('/savepreferences', (req, res)=>
 {
   console.log("attempting to save music preferences");
-  const {username, musicOn, volume} = req.body; // get the data
+  const {username, musicOn, volume, playSFX, showTips} = req.body; // get the data
   findUser(username, function(err, user){//find the user
-      if(user === null) {//if the username couldn't be found
+      if(user === null) 
+      {//if the username couldn't be found
         console.log("fail_user_not_found");
         return res.json({status: "fail_user_not_found"});
       }
-      else{
-            let musicOnValue;
-    if (musicOn === true || musicOn === 'true' || musicOn === 'True') {
-        musicOnValue = 1;
-    } else {
-        musicOnValue = 0;
-    }
-    
-    // Convert volume to number if it's a string
-    const volumeValue = parseFloat(volume);
-    
-    console.log("Converted values:", {musicOnValue, volumeValue, username});
-        let sql = "UPDATE user_information SET musicOn = ?, volume = ? WHERE username = ?";
-        con.query(sql, [musicOnValue, volumeValue, username], function (err, result) {
+      else
+      {
+        let musicOnValue;
+        if (musicOn === true || musicOn === 'true' || musicOn === 'True') {
+            musicOnValue = 1;
+        } else {
+            musicOnValue = 0;
+        }
+        let playSFXValue;
+        if (playSFX === true || playSFX === 'true' || playSFX === 'True') {
+            playSFXValue = 1;
+        } else {
+            playSFXValue = 0;
+        }
+        let showTipsValue;
+        if (showTips === true || showTips === 'true' || showTips === 'True') {
+            showTipsValue = 1;
+        } else {
+            showTipsValue = 0;
+        }
+        // Convert volume to number if it's a string
+        const volumeValue = parseFloat(volume);
+        
+        // console.log("Converted values:", {musicOnValue, volumeValue, username});
+        let sql = "UPDATE user_information SET musicOn = ?, volume = ?, playSFX = ?, showTips = ? WHERE username = ?";
+        query(sql, [musicOnValue, volumeValue, playSFXValue, showTipsValue, username], function (err, result) {
           if (err) {
             console.log("SQL Error details:", err); // This will show the actual error
             console.log("SQL Query:", sql);
-            console.log("Parameters:", [musicOn, volume, username]);
-            console.log("user music preferences failed to save");
+            console.log("Parameters:", [musicOn, volume, playSFXValue, showTipsValue, username]);
+            console.log("user preferences failed to save");
             return res.json({ status: "fail", message: "error_saving_music_preferences"});
           }
           if (result.affectedRows > 0) {
@@ -99,6 +166,25 @@ app.post('/savemusicpreferences', (req, res)=>
       }
     });
 });
+
+app.get('/topscores', (req, res) => {
+  console.log("attempting to get top scores");
+  let sql = "SELECT username, topScore FROM user_information ORDER BY topScore DESC LIMIT 5";
+  query(sql, function(err, result){
+    if(err){
+      console.log("Database error:", err);
+      return res.json({ status: "fail" });
+    }
+    else if(result.length > 0){
+      console.log("Users found, top user: ", result[0].username);
+      res.json(result);// top scores found
+    }
+    else{
+      console.log("Top scores not found");
+      res.json([]);
+    }
+  })
+})
 
 app.post('/login', (req,res)=>
 {//login a user 
@@ -117,8 +203,8 @@ app.post('/login', (req,res)=>
           return res.json({ status: "fail_error_checking_password"});
         }
         if (isMatch) {// Login successful
-          console.log("Password correct!");
-          return res.json({ status: "success", username: user.username, gameInProgress:user.gameInProgress, musicOn:user.musicOn, volume: user.volume});
+          console.log("Password correct! top score = ", user.topScore);
+          return res.json({ status: "success", username: user.username, gameInProgress:user.gameInProgress, topScore: user.topScore, musicOn:user.musicOn, volume: user.volume, playSFX: user.playSFX, showTips: user.showTips   });
         } else {
           console.log("Password incorrect!");
           return res.json({ status: "fail_password_not_correct"});
@@ -148,7 +234,7 @@ function findUser(usernameCheck, callback){//find the user in the database by th
 //  con.connect(function(err) {
 //       if (err) throw err;
       let sql = "SELECT * FROM user_information WHERE username = ?";
-      con.query(sql, [usernameCheck], function (err, result) {
+      query(sql, [usernameCheck], function (err, result) {
         if (err) 
         {
           console.log("Database error:", err);
