@@ -306,10 +306,12 @@ function findUser(usernameCheck, callback){//find the user in the database by th
 
 async function createUser(username, password) 
 {//creates a new account in the database and hashes the password
+  //et sql = "UPDATE user_information SET password = ?, gameinProgress = ?, scene = ?, lives = ?, score = ?, topScore = ?, musicOn = ?, volume = ?, playSFX = ?, showTips = ? WHERE username = ?";
+        // query(sql, [user.password, user.gameInProgress, user.scene, user.lives, user.score, user.topScore, musicOnValue, volumeValue, playSFXValue, showTipsValue, username], function (err, result) {
   const password_hashed = await bcrypt.hash(password, 10);
-    let sql = "INSERT INTO user_information (username, password, gameInProgress) VALUES ?";
+    let sql = "INSERT INTO user_information (username, password, gameInProgress, scene, lives, score) VALUES ?";
     let user = [
-        [username, password_hashed, 0],
+        [username, password_hashed, 0, 4, 5, 0],
     ];
       pool.query(sql, [user], function (err, result) {
         if (err) {
