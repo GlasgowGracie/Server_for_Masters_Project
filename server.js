@@ -281,7 +281,7 @@ async function createUser(username, password)
   const password_hashed = await bcrypt.hash(password, 10);
     let sql = "INSERT INTO user_information (username, password_hashed) VALUES ?";
     let user = [
-        [username, password_hashed],
+        [username, password_hashed,0],
     ];
       pool.query(sql, [user], function (err, result) {
         if (err) {
