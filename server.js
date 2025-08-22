@@ -35,7 +35,7 @@ if (process.env.DATABASE_URL) {
     database: databaseName
   });
 }
-
+let pool;
 function query(sql, params, callback) {
   pool.query(sql, params, callback);
 }
