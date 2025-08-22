@@ -4,6 +4,7 @@ var express = require("express");
 
 var bodyparser = require('body-parser');
 const bcrypt = require('bcrypt');//used for password hashing
+const cors = require("cors");
 
 var app = express();
 
@@ -13,7 +14,7 @@ var databaseName = "babette_database"
 const port = process.env.PORT || 3000;
 app.use(bodyparser.urlencoded({ extended: true }));
 app.use(bodyparser.json());
-
+app.use(cors());
 
 //for local hosting
 // let con = mysql.createConnection({
