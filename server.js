@@ -24,31 +24,54 @@ app.use(cors());
 //   database: databaseName
 // });
 
-let con;
+// let con;
+// if (process.env.DATABASE_URL) {
+//   con = mysql.createConnection(process.env.DATABASE_URL);
+// } else {
+//   con = mysql.createConnection({
+//     host: "localhost",
+//     user: "root",
+//     password: "babette",
+//     database: databaseName
+//   });
+// }
+// let pool;
+// function query(sql, params, callback) {
+//   pool.query(sql, params, callback);
+// }
+let pool;
 if (process.env.DATABASE_URL) {
-  con = mysql.createConnection(process.env.DATABASE_URL);
+  pool = mysql.createPool({
+    uri: process.env.DATABASE_URL,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  });
 } else {
-  con = mysql.createConnection({
+  pool = mysql.createPool({
     host: "localhost",
     user: "root",
     password: "babette",
     database: databaseName
   });
 }
-let pool;
+
 function query(sql, params, callback) {
   pool.query(sql, params, callback);
 }
 
-con.connect(function(err) {
-  if (err) {
-    console.log("Database connection failed:", err);
-    return;
-  }
-  console.log("Connected to database!");
-});
+// con.connect(function(err) {
+//   if (err) {
+//     console.log("Database connection failed:", err);
+//     return;
+//   }
+//   console.log("Connected to database!");
+// });
 
-app.listen(port);
+// app.listen(port);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
 
 app.get('/health', (req, res) =>{
   res.json({status:"server_online", timestamp: new Date().toISOString()})
@@ -260,7 +283,7 @@ async function createUser(username, password)
     let user = [
         [username, password_hashed],
     ];
-      con.query(sql, [user], function (err, result) {
+      pool.query(sql, [user], function (err, result) {
         if (err) {
           console.log("error saving password");          
           throw err;
