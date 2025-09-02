@@ -197,10 +197,6 @@ app.post('/savepreferences', (req, res)=>
         }
         // Convert volume to number if it's a string
         const volumeValue = parseFloat(volume);
-        
-        // console.log("Converted values:", {musicOnValue, volumeValue, username});
-        // let sql = "UPDATE user_information SET musicOn = ?, volume = ?, playSFX = ?, showTips = ? WHERE username = ?";
-        // query(sql, [musicOnValue, volumeValue, playSFXValue, showTipsValue, username], function (err, result) {
          let sql = "UPDATE user_information SET password = ?, gameinProgress = ?, scene = ?, lives = ?, score = ?, topScore = ?, musicOn = ?, volume = ?, playSFX = ?, showTips = ? WHERE username = ?";
         query(sql, [user.password, user.gameInProgress, user.scene, user.lives, user.score, user.topScore, musicOnValue, volumeValue, playSFXValue, showTipsValue, username], function (err, result) {
           if (err) {
@@ -221,7 +217,7 @@ app.post('/savepreferences', (req, res)=>
 
 app.get('/topscores', (req, res) => {
   console.log("attempting to get top scores");
-  let sql = "SELECT username, topScore FROM user_information ORDER BY topScore DESC LIMIT 5";
+  let sql = "SELECT username, topScore FROM user_information WHERE topScore > 0 ORDER BY topScore DESC LIMIT 5";
   query(sql, function(err, result){
     if(err){
       console.log("Database error:", err);
