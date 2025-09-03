@@ -1,3 +1,5 @@
+//this code was used to create fake users when initially developing the server and database
+
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2');
 

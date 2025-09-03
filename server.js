@@ -2,53 +2,30 @@
 let mysql = require('mysql2');
 var express = require("express");
 
-var bodyparser = require('body-parser');
+var bodyparser = require('body-parser');//parses requests
 const bcrypt = require('bcrypt');//used for password hashing
 const cors = require("cors");
 
 var app = express();
 
 
-var databaseName = "babette_database"
-// const port = 8000;//for local hosting
-const port = process.env.PORT || 3000;
+var databaseName = "babette_database"//name of the database that this server connects to
+const port = process.env.PORT || 3000;//PORT used if delpoyed, otherwise use port 3000
 app.use(bodyparser.urlencoded({ extended: true }));
 app.use(bodyparser.json());
 app.use(cors());
 
-//for local hosting
-// let con = mysql.createConnection({
-//   host: "localhost",
-//   user: "root",
-//   password: "babette",
-//   database: databaseName
-// });
-
-// let con;
-// if (process.env.DATABASE_URL) {
-//   con = mysql.createConnection(process.env.DATABASE_URL);
-// } else {
-//   con = mysql.createConnection({
-//     host: "localhost",
-//     user: "root",
-//     password: "babette",
-//     database: databaseName
-//   });
-// }
-// let pool;
-// function query(sql, params, callback) {
-//   pool.query(sql, params, callback);
-// }
+//settin up the MySQL connection pool
 let pool;
 if (process.env.DATABASE_URL) {
-  pool = mysql.createPool({
+  pool = mysql.createPool({//if deployed 
     uri: process.env.DATABASE_URL,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
   });
 } else {
-  pool = mysql.createPool({
+  pool = mysql.createPool({//if not deployed
     host: "localhost",
     user: "root",
     password: "babette",
@@ -56,25 +33,16 @@ if (process.env.DATABASE_URL) {
   });
 }
 
-function query(sql, params, callback) {
+function query(sql, params, callback) {//queries are run using the pool
   pool.query(sql, params, callback);
 }
 
-// con.connect(function(err) {
-//   if (err) {
-//     console.log("Database connection failed:", err);
-//     return;
-//   }
-//   console.log("Connected to database!");
-// });
-
-// app.listen(port);
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server running on port ${port}`);//start the server
 });
 
 app.get('/health', (req, res) =>{
-  res.json({status:"server_online", timestamp: new Date().toISOString()})
+  res.json({status:"server_online", timestamp: new Date().toISOString()})//check that the server is running
 })
 
 
@@ -87,17 +55,15 @@ app.post('/save', (req, res) => {//saves the game progress to the database
       return res.json({status: "fail_user_not_found"});
     }
     else{
-      bools = convertBools(gameInProgress, musicOn, playSFX, showTips)
+      bools = convertBools(gameInProgress, musicOn, playSFX, showTips)//convert the string into 0 or 1
       const volumeValue = parseFloat(volume); // Convert volume to number if it's a string
         
       let sql = "UPDATE user_information SET password = ?, gameinProgress = ?, scene = ?, lives = ?, score = ?, topScore = ?, musicOn = ?, volume = ?, playSFX = ?, showTips = ? WHERE username = ?";
-      query(sql, [user.password, bools[0], scene, lives, score, topScore, bools[1], volumeValue, bools[2], bools[3], username], function (err, result) {
+      query(sql, [user.password, bools[0], scene, lives, score, topScore, bools[1], volumeValue, bools[2], bools[3], username], function (err, result) {//send the query to the database
         if (err) {
-                    // console.log("failed to save",{gameProgValue, scene, lives, score,topScore, musicOnValue, volumeValue, playSFXValue, showTipsValue});
           return res.json({ status: "fail", message: "error_saving_user_data"});
         }
         if (result.affectedRows > 0) {
-          // console.log("User updated successfully",  {gameInProgress, scene, lives, score,topScore, musicOnValue, volumeValue, playSFXValue, showTipsValue});
           return res.json({ status: "success"});
         }
       });
@@ -134,39 +100,10 @@ function convertBools(gameInProgress, musicOn, playSFX, showTips){//converts the
   return [gameProgValue, musicOnValue, playSFXValue, showTipsValue]
 }
 
-// app.post('/savetopscore', (req, res) =>{
-//   console.log("attempting to save top score");
-//   const {username, topScore} = req.body; // get the data
-//   findUser(username, function(err, user){//find the user
-//     if(user === null) 
-//     {//if the username couldn't be found
-//       console.log("fail_user_not_found");
-//       return res.json({status: "fail_user_not_found"});
-//     }
-//     else
-//     {
-//       let sql = "UPDATE user_information SET topScore = ? WHERE username = ?";
-//       query(sql, [topScore, username], function (err, result) {
-//         if (err) {
-//           console.log("top score failed to save");
-//           return res.json({ status: "fail", message: "error_saving_music_preferences"});
-//         }
-//         if (result.affectedRows > 0) {
-//           console.log("top score updated successfully", topScore);
-//           return res.json({ status: "success"});
-//         }
-//         else{
-//           return res.json({ status: "fail", message: "error_saving_music_preferences"});
-//         }
-//       });
-//     }
-//   });
-
-// })
 
 
 app.post('/savepreferences', (req, res)=>
-{
+{//saves user preferences
   console.log("attempting to save music preferences");
   const {username, musicOn, volume, playSFX, showTips} = req.body; // get the data
   findUser(username, function(err, user){//find the user
@@ -176,7 +113,7 @@ app.post('/savepreferences', (req, res)=>
         return res.json({status: "fail_user_not_found"});
       }
       else
-      {
+      {//convert strings for booleans into numbers
         let musicOnValue;
         if (musicOn === true || musicOn === 'true' || musicOn === 'True') {
             musicOnValue = 1;
@@ -215,9 +152,9 @@ app.post('/savepreferences', (req, res)=>
     });
 });
 
-app.get('/topscores', (req, res) => {
+app.get('/topscores', (req, res) => {//returns the top scores from the database
   console.log("attempting to get top scores");
-  let sql = "SELECT username, topScore FROM user_information WHERE topScore > 0 ORDER BY topScore DESC LIMIT 5";
+  let sql = "SELECT username, topScore FROM user_information WHERE topScore > 0 ORDER BY topScore DESC LIMIT 5";//gets the top 5 results
   query(sql, function(err, result){
     if(err){
       console.log("Database error:", err);
@@ -263,7 +200,7 @@ app.post('/login', (req,res)=>
 });
 
 app.post('/resumegame', (req,res)=>
-{//login a user 
+{//get details of previous game so that it can be resumed 
   console.log("attempting to resume game");
   const {username} = req.body;
   findUser(username, function(err, user){//find the user 
@@ -279,8 +216,6 @@ app.post('/resumegame', (req,res)=>
 });
 
 function findUser(usernameCheck, callback){//find the user in the database by the username
-//  con.connect(function(err) {
-//       if (err) throw err;
       let sql = "SELECT * FROM user_information WHERE username = ?";
       query(sql, [usernameCheck], function (err, result) {
         if (err) 
@@ -296,18 +231,14 @@ function findUser(usernameCheck, callback){//find the user in the database by th
             callback(null, null); // User not found return null
         }
       });
-  // });
-
 }
 
 async function createUser(username, password) 
 {//creates a new account in the database and hashes the password
-  //et sql = "UPDATE user_information SET password = ?, gameinProgress = ?, scene = ?, lives = ?, score = ?, topScore = ?, musicOn = ?, volume = ?, playSFX = ?, showTips = ? WHERE username = ?";
-        // query(sql, [user.password, user.gameInProgress, user.scene, user.lives, user.score, user.topScore, musicOnValue, volumeValue, playSFXValue, showTipsValue, username], function (err, result) {
   const password_hashed = await bcrypt.hash(password, 10);
     let sql = "INSERT INTO user_information (username, password, gameInProgress, scene, lives, score, topScore, musicOn, volume, playSFX, showTips) VALUES ?";
     let user = [
-        [username, password_hashed, 0, 4, 5, 0, 0, 1, 0.5, 1, 1]
+        [username, password_hashed, 0, 4, 5, 0, 0, 1, 0.5, 1, 1]//also inserts default data for the other attributes due to railway's database not setting them to default values
     ];
       pool.query(sql, [user], function (err, result) {
         if (err) {
@@ -334,6 +265,7 @@ app.post('/signup', (req, res) =>
 
 });
 
+//old code from when writing to a JSON file
 
 //old sign in code:
   // let usersData = JSON.parse(fs.readFileSync(fileName));//get current users
